@@ -66,28 +66,46 @@ export default function UsersPage() {
     status: "ACTIVE",
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   const { data: usersData, isLoading } = useGetUsers(filters);
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
 
   const handleCreate = async () => {
+    setFormErrors({});
     try {
       await createMutation.mutateAsync(formData);
       toast({ title: "User created successfully" });
       setIsAddDialogOpen(false);
       resetForm();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to create user",
-        description: error?.response?.data?.message || "Something went wrong",
-      });
+      const response = error?.response?.data;
+      if (response?.errors && Array.isArray(response.errors)) {
+        const fieldErrors: Record<string, string> = {};
+        response.errors.forEach((err: { field: string; message: string }) => {
+          fieldErrors[err.field] = err.message;
+        });
+        setFormErrors(fieldErrors);
+        toast({
+          variant: "destructive",
+          title: "Validation failed",
+          description: "Please fix the errors below",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to create user",
+          description: response?.message || "Something went wrong",
+        });
+      }
     }
   };
 
   const handleUpdate = async () => {
     if (!selectedUser) return;
+    setFormErrors({});
     try {
       await updateMutation.mutateAsync({
         id: selectedUser.id,
@@ -101,11 +119,25 @@ export default function UsersPage() {
       setIsEditDialogOpen(false);
       resetForm();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to update user",
-        description: error?.response?.data?.message || "Something went wrong",
-      });
+      const response = error?.response?.data;
+      if (response?.errors && Array.isArray(response.errors)) {
+        const fieldErrors: Record<string, string> = {};
+        response.errors.forEach((err: { field: string; message: string }) => {
+          fieldErrors[err.field] = err.message;
+        });
+        setFormErrors(fieldErrors);
+        toast({
+          variant: "destructive",
+          title: "Validation failed",
+          description: "Please fix the errors below",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to update user",
+          description: response?.message || "Something went wrong",
+        });
+      }
     }
   };
 
@@ -133,6 +165,7 @@ export default function UsersPage() {
       role: user.role,
       status: user.status,
     });
+    setFormErrors({});
     setIsEditDialogOpen(true);
   };
 
@@ -342,7 +375,10 @@ export default function UsersPage() {
       </Card>
 
       {/* Add User Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open);
+        if (!open) setFormErrors({});
+      }}>
         <DialogContent className="bg-white border-gray-200 text-gray-900">
           <DialogHeader>
             <DialogTitle>Add User</DialogTitle>
@@ -355,6 +391,9 @@ export default function UsersPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="bg-white border-gray-300"
               />
+              {formErrors.name && (
+                <p className="text-sm text-red-500">{formErrors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Email</Label>
@@ -364,6 +403,9 @@ export default function UsersPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="bg-white border-gray-300"
               />
+              {formErrors.email && (
+                <p className="text-sm text-red-500">{formErrors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Password</Label>
@@ -373,6 +415,9 @@ export default function UsersPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="bg-white border-gray-300"
               />
+              {formErrors.password && (
+                <p className="text-sm text-red-500">{formErrors.password}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
@@ -407,7 +452,10 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open);
+        if (!open) setFormErrors({});
+      }}>
         <DialogContent className="bg-white border-gray-200 text-gray-900">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
@@ -420,6 +468,9 @@ export default function UsersPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="bg-white border-gray-300"
               />
+              {formErrors.name && (
+                <p className="text-sm text-red-500">{formErrors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Role</Label>

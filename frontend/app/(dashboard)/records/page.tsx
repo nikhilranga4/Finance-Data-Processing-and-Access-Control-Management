@@ -53,12 +53,15 @@ export default function RecordsPage() {
     notes: "",
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   const { data: recordsData, isLoading } = useGetRecords(filters);
   const createMutation = useCreateRecord();
   const updateMutation = useUpdateRecord();
   const deleteMutation = useDeleteRecord();
 
   const handleCreate = async () => {
+    setFormErrors({});
     try {
       await createMutation.mutateAsync({
         amount: parseFloat(formData.amount),
@@ -71,16 +74,31 @@ export default function RecordsPage() {
       setIsAddDialogOpen(false);
       resetForm();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to create record",
-        description: error?.response?.data?.message || "Something went wrong",
-      });
+      const response = error?.response?.data;
+      if (response?.errors && Array.isArray(response.errors)) {
+        const fieldErrors: Record<string, string> = {};
+        response.errors.forEach((err: { field: string; message: string }) => {
+          fieldErrors[err.field] = err.message;
+        });
+        setFormErrors(fieldErrors);
+        toast({
+          variant: "destructive",
+          title: "Validation failed",
+          description: "Please fix the errors below",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to create record",
+          description: response?.message || "Something went wrong",
+        });
+      }
     }
   };
 
   const handleUpdate = async () => {
     if (!selectedRecord) return;
+    setFormErrors({});
     try {
       await updateMutation.mutateAsync({
         id: selectedRecord.id,
@@ -96,11 +114,25 @@ export default function RecordsPage() {
       setIsEditDialogOpen(false);
       resetForm();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to update record",
-        description: error?.response?.data?.message || "Something went wrong",
-      });
+      const response = error?.response?.data;
+      if (response?.errors && Array.isArray(response.errors)) {
+        const fieldErrors: Record<string, string> = {};
+        response.errors.forEach((err: { field: string; message: string }) => {
+          fieldErrors[err.field] = err.message;
+        });
+        setFormErrors(fieldErrors);
+        toast({
+          variant: "destructive",
+          title: "Validation failed",
+          description: "Please fix the errors below",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to update record",
+          description: response?.message || "Something went wrong",
+        });
+      }
     }
   };
 
@@ -128,6 +160,7 @@ export default function RecordsPage() {
       date: record.date.split("T")[0],
       notes: record.notes || "",
     });
+    setFormErrors({});
     setIsEditDialogOpen(true);
   };
 
@@ -339,6 +372,7 @@ export default function RecordsPage() {
         if (!open) {
           setIsAddDialogOpen(false);
           setIsEditDialogOpen(false);
+          setFormErrors({});
         }
       }}>
         <DialogContent className="bg-white border-gray-200 text-gray-900">
@@ -355,6 +389,9 @@ export default function RecordsPage() {
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 className="bg-white border-gray-300"
               />
+              {formErrors.amount && (
+                <p className="text-sm text-red-500">{formErrors.amount}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Type</Label>
@@ -378,6 +415,9 @@ export default function RecordsPage() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="bg-white border-gray-300"
               />
+              {formErrors.category && (
+                <p className="text-sm text-red-500">{formErrors.category}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Date</Label>
@@ -387,6 +427,9 @@ export default function RecordsPage() {
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 className="bg-white border-gray-300"
               />
+              {formErrors.date && (
+                <p className="text-sm text-red-500">{formErrors.date}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Notes</Label>
