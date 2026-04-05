@@ -5,52 +5,51 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, TrendingUp, Eye, UserCog, Loader2, EyeIcon, EyeOffIcon } from "lucide-react";
-import Link from "next/link";
+import { Wallet, Loader2, EyeIcon, EyeOffIcon } from "lucide-react";
 
-const loginSchema = z.object({
+const registerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type RegisterForm = z.infer<typeof registerSchema>;
 
-const demoAccounts = [
-  { role: "Admin", email: "admin@finance.com", password: "Admin@123", icon: UserCog, color: "bg-amber-100 text-amber-700 border-amber-200" },
-  { role: "Analyst", email: "analyst@finance.com", password: "Analyst@123", icon: TrendingUp, color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { role: "Viewer", email: "viewer@finance.com", password: "Viewer@123", icon: Eye, color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-];
-
-export default function LoginPage() {
+export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
-  const { login, isLoggingIn } = useAuth();
+  const { register: registerUser, isRegistering } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: RegisterForm) => {
     setServerErrors({});
     try {
-      await login(data);
+      await registerUser(data);
       toast({
-        title: "Welcome back!",
-        description: "Successfully logged in.",
+        title: "Account created!",
+        description: "Welcome to Finance Dashboard.",
       });
       router.push("/dashboard");
     } catch (error: any) {
@@ -70,16 +69,11 @@ export default function LoginPage() {
       } else {
         toast({
           variant: "destructive",
-          title: "Login failed",
-          description: response?.message || "Invalid credentials",
+          title: "Registration failed",
+          description: response?.message || "Something went wrong",
         });
       }
     }
-  };
-
-  const fillDemoAccount = (account: typeof demoAccounts[0]) => {
-    setValue("email", account.email);
-    setValue("password", account.password);
   };
 
   return (
@@ -90,19 +84,36 @@ export default function LoginPage() {
           <Wallet className="h-8 w-8 text-blue-600" />
         </div>
         <h1 className="text-3xl font-bold gradient-text mb-2">Finance Dashboard</h1>
-        <p className="text-gray-500">Financial Data Processing & Access Control</p>
+        <p className="text-gray-500">Create your account</p>
       </div>
 
-      {/* Login Card */}
+      {/* Register Card */}
       <Card className="finance-card">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-xl text-gray-900">Sign in</CardTitle>
+          <CardTitle className="text-xl text-gray-900">Sign up</CardTitle>
           <CardDescription className="text-gray-500">
-            Enter your credentials to access the dashboard
+            Create an account to access the dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-gray-700">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500"
+                {...register("name")}
+              />
+              {errors.name && (
+                <p className="text-sm text-red-500">{errors.name.message}</p>
+              )}
+              {serverErrors.name && (
+                <p className="text-sm text-red-500">{serverErrors.name}</p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-gray-700">Email</Label>
               <Input
@@ -135,7 +146,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOffIcon className="h-4 w-4" />
+                  ) : (
+                    <EyeIcon className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {errors.password && (
@@ -149,55 +164,32 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 transition-all duration-200"
-              disabled={isLoggingIn}
+              disabled={isRegistering}
             >
-              {isLoggingIn ? (
+              {isRegistering ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  Creating account...
                 </>
               ) : (
-                "Sign in"
+                "Create account"
               )}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              Don&apos;t have an account?{" "}
+              Already have an account?{" "}
               <Link
-                href="/register"
+                href="/login"
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                Sign up
+                Sign in
               </Link>
             </p>
           </div>
         </CardContent>
       </Card>
-
-      {/* Demo Accounts */}
-      <div className="mt-8">
-        <p className="text-center text-gray-400 text-sm mb-4">Demo Accounts</p>
-        <div className="grid grid-cols-3 gap-3">
-          {demoAccounts.map((account) => {
-            const Icon = account.icon;
-            return (
-              <button
-                key={account.role}
-                onClick={() => fillDemoAccount(account)}
-                className={`p-3 rounded-xl border ${account.color} hover:opacity-80 transition-all duration-200 text-center group`}
-              >
-                <Icon className="h-5 w-5 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                <Badge variant="outline" className={`${account.color} text-xs border-0`}>
-                  {account.role}
-                </Badge>
-                <p className="text-[10px] mt-1 opacity-70">{account.email}</p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }
